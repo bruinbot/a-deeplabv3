@@ -96,7 +96,7 @@ def main():
         print("Resume model from %s" % opts.ckpt)
         del checkpoint
     else:
-        print("[!] Retrain")
+        print("[!] Retrain: Your weights are not found.")
         model = nn.DataParallel(model)
         model.to(device)
 
@@ -118,18 +118,24 @@ def main():
             ])
     if opts.save_val_results_to is not None:
         os.makedirs(opts.save_val_results_to, exist_ok=True)
+        
     with torch.no_grad():
         model = model.eval()
         for img_path in tqdm(image_files):
             ext = os.path.basename(img_path).split('.')[-1]
             img_name = os.path.basename(img_path)[:-len(ext)-1]
-            img = Image.open(img_path).convert('RGB')
-            img = transform(img).unsqueeze(0) # To tensor of NCHW
+            
+            pic = Image.open(img_path).convert('RGB')
+            img = transform(pic).unsqueeze(0) # To tensor of NCHW
             img = img.to(device)
             
             pred = model(img).max(1)[1].cpu().numpy()[0] # HW
             colorized_preds = decode_fn(pred).astype('uint8')
             colorized_preds = Image.fromarray(colorized_preds)
+
+            # transparent layer
+            colorized_preds = Image.blend(colorized_preds, pic, 0.5)
+
             if opts.save_val_results_to:
                 colorized_preds.save(os.path.join(opts.save_val_results_to, img_name+'.png'))
 

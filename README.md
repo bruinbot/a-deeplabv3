@@ -2,6 +2,25 @@
 
 Pretrained DeepLabv3, DeepLabv3+ for Pascal VOC & Cityscapes.
 
+## BruinBot notes
+`$ git clone https://github.com/VainF/DeepLabV3Plus-Pytorch.git`
+
+cd into /DeepLab...
+`$ pip install -r requirements.txt`
+
+note:
+we skipped 'load pretrained model' and 'visualize segmentation outputs' because these lines of code were already in predict.py and main.py (whatever that means?)
+
+download this:
+https://www.dropbox.com/s/753ojyvsh3vdjol/best_deeplabv3plus_mobilenet_cityscapes_os16.pth?dl=0
+
+move that to root folder where you cloned the repo
+
+create folder 'img' and put a sidewalk.png image in it
+
+in vscode terminal run this line:
+`python3 predict.py --input img/sidewalk.png  --dataset cityscapes --model deeplabv3plus_mobilenet --ckpt best_deeplabv3plus_mobilenet_cityscapes_os16.pth --save_val_results_to test_results`
+
 ## Quick Start 
 
 ### 1. Available Architectures
