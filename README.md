@@ -19,7 +19,8 @@ move that to root folder where you cloned the repo
 create folder 'img' and put a sidewalk.png image in it
 
 in vscode terminal run this line:
-`python3 predict.py --input img/sidewalk.png  --dataset cityscapes --model deeplabv3plus_mobilenet --ckpt best_deeplabv3plus_mobilenet_cityscapes_os16.pth --save_val_results_to test_results`
+
+```python3 predict.py --input img/sidewalk.png  --dataset cityscapes --model deeplabv3plus_mobilenet --ckpt best_deeplabv3plus_mobilenet_cityscapes_os16.pth --save_val_results_to test_results```
 
 ## Quick Start 
 
