@@ -9,7 +9,7 @@ in your terminal, cd into /a-deeplabv3 and run the command
 
 ```python3 predict.py --input img/sidewalk.png  --dataset cityscapes --model deeplabv3plus_mobilenet --ckpt best_deeplabv3plus_mobilenet_cityscapes_os16.pth --save_val_results_to test_results```
 
-you should see a default image in your repository become segmented with our deep learning model!
+you should see your default sidewalk.png in the /img folder segmented with our deep learning model! this new file will be stored in /test_results folder. check it out.
 
 starter next steps:
 - get your own image from the web, or take a sidewalk picture with your phone when you go out on ucla campus
