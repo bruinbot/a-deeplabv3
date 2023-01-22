@@ -2,7 +2,22 @@
 
 Pretrained DeepLabv3, DeepLabv3+ for Pascal VOC & Cityscapes.
 
-## BruinBot notes
+## ⭐ BruinBot Notes (for New Members Winter 2023) ⭐
+`$ git clone https://github.com/bruinbot/a-deeplabv3.git`
+
+in your terminal, cd into /a-deeplabv3 and run the command
+
+```python3 predict.py --input img/sidewalk.png  --dataset cityscapes --model deeplabv3plus_mobilenet --ckpt best_deeplabv3plus_mobilenet_cityscapes_os16.pth --save_val_results_to test_results```
+
+you should see a default image in your repository become segmented with our deep learning model!
+
+starter next steps:
+- get your own image from the web, or take a sidewalk picture with your phone when you go out on ucla campus
+- move your image into this repository and rename the image file to something easy to remember
+- change your terminal command with the part `--input img/sidewalk.png` to `--input img/[your file name].png`
+
+
+## BruinBot Fall 2022 Notes
 `$ git clone https://github.com/VainF/DeepLabV3Plus-Pytorch.git`
 
 cd into /DeepLab...
