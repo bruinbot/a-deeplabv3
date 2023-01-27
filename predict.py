@@ -128,7 +128,7 @@ def main():
             colorized_preds = decode_fn(pred).astype('uint8')
 
             # Clean up B/W image using morphological operations
-            kernel = np.ones((10,10) , np.uint8) # kernel side determines resolution
+            kernel = np.ones((15,15) , np.uint8) # kernel side determines resolution
             colorized_preds = cv.morphologyEx(colorized_preds, cv.MORPH_OPEN, kernel)
             colorized_preds = cv.morphologyEx(colorized_preds, cv.MORPH_CLOSE, kernel)
 
