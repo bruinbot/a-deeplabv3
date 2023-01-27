@@ -1,23 +1,18 @@
-from torch.utils.data import dataset
 from tqdm import tqdm
 import network
 import utils
 import os
-import random
 import argparse
 import numpy as np
+import cv2 as cv
 
-from torch.utils import data
-from datasets import VOCSegmentation, Cityscapes, cityscapes
+from datasets import VOCSegmentation, Cityscapes
 from torchvision import transforms as T
-from metrics import StreamSegMetrics
 
 import torch
 import torch.nn as nn
 
 from PIL import Image
-import matplotlib
-import matplotlib.pyplot as plt
 from glob import glob
 
 def get_argparser():
@@ -131,6 +126,12 @@ def main():
             
             pred = model(img).max(1)[1].cpu().numpy()[0] # HW
             colorized_preds = decode_fn(pred).astype('uint8')
+
+            # Clean up B/W image using morphological operations
+            kernel = np.ones((15,15) , np.uint8) # kernel side determines resolution
+            colorized_preds = cv.morphologyEx(colorized_preds, cv.MORPH_OPEN, kernel)
+            colorized_preds = cv.morphologyEx(colorized_preds, cv.MORPH_CLOSE, kernel)
+
             colorized_preds = Image.fromarray(colorized_preds)
 
             # transparent layer
