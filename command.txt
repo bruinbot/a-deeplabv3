@@ -1,0 +1,1 @@
+python3 predict.py --input img/sidewalk.png --dataset cityscapes --model deeplabv3plus_mobilenet --ckpt weights/scratch.pth --save_val_results_to test_results

@@ -15,6 +15,11 @@ import torch.nn as nn
 from PIL import Image
 from glob import glob
 
+import calc_steering_angle as st_util
+
+import cv2 as cv
+import numpy as np
+
 def get_argparser():
     parser = argparse.ArgumentParser()
 
@@ -95,7 +100,7 @@ def main():
         model = nn.DataParallel(model)
         model.to(device)
 
-    #denorm = utils.Denormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # denormalization for ori images
+    # denorm = utils.Denormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # denormalization for ori images
 
     if opts.crop_val:
         transform = T.Compose([
@@ -121,24 +126,35 @@ def main():
             img_name = os.path.basename(img_path)[:-len(ext)-1]
             
             pic = Image.open(img_path).convert('RGB')
-            img = transform(pic).unsqueeze(0) # To tensor of NCHW
+            img = transform(pic).unsqueeze(0)
             img = img.to(device)
             
-            pred = model(img).max(1)[1].cpu().numpy()[0] # HW
+            pred = model(img).max(1)[1].cpu().numpy()[0]
             colorized_preds = decode_fn(pred).astype('uint8')
 
             # Clean up B/W image using morphological operations
-            kernel = np.ones((15,15) , np.uint8) # kernel side determines resolution
+            kernel = np.ones((10,10) , np.uint8) # kernel side determines resolution
             colorized_preds = cv.morphologyEx(colorized_preds, cv.MORPH_OPEN, kernel)
             colorized_preds = cv.morphologyEx(colorized_preds, cv.MORPH_CLOSE, kernel)
 
+            # Forms a B/W image of segmentated drivable region
             colorized_preds = Image.fromarray(colorized_preds)
 
-            # transparent layer
-            colorized_preds = Image.blend(colorized_preds, pic, 0.5)
+            # Create instance of steering angle calculator
+            lane_follower = st_util.HandCodedLaneFollower()
+
+            # Function that does a couple of things that could be removed.
+            # Most importantly returns array with boundary line overlay and calls another function that returns steering angle
+            pred_with_angle = lane_follower.follow_lane(colorized_preds)
+
+            # Create the image
+            img_with_angle = Image.fromarray(pred_with_angle)
+
+            # Overlay segmentation with og image
+            final_img = Image.blend(img_with_angle, pic, 0.25)
 
             if opts.save_val_results_to:
-                colorized_preds.save(os.path.join(opts.save_val_results_to, img_name+'.png'))
+                final_img.save(os.path.join(opts.save_val_results_to, img_name+'.png'))
 
 if __name__ == '__main__':
     main()
