@@ -5,9 +5,11 @@ Pretrained DeepLabv3, DeepLabv3+ for Pascal VOC & Cityscapes.
 ## ⭐ BruinBot Notes (for New Members Winter 2023) ⭐
 ```
 $ git clone https://github.com/bruinbot/a-deeplabv3.git
+$ cd a-deeplabv3
+$ pip install requirements.txt
 ```
 
-in your terminal, cd into /a-deeplabv3 and run the command below. Make sure you have the [model weights](https://www.dropbox.com/sh/w3z9z8lqpi8b2w7/AACuA2aBZLrhPk4hGjLtgmwKa/best_deeplabv3plus_mobilenet_cityscapes_os16.pth?dl=0) downloaded and saved in the root folder of the project.
+Run the command below to generate a segmentation. Make sure you have the [model weights](https://www.dropbox.com/sh/w3z9z8lqpi8b2w7/AACuA2aBZLrhPk4hGjLtgmwKa/best_deeplabv3plus_mobilenet_cityscapes_os16.pth?dl=0) downloaded and saved in the root folder of the project.
 
 ```
 python3 predict.py --input img/sidewalk.png  --dataset cityscapes --model deeplabv3plus_mobilenet --ckpt best_deeplabv3plus_mobilenet_cityscapes_os16.pth --save_val_results_to test_results
