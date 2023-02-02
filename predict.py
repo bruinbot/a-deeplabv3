@@ -3,8 +3,6 @@ import network
 import utils
 import os
 import argparse
-import numpy as np
-import cv2 as cv
 
 from datasets import VOCSegmentation, Cityscapes
 from torchvision import transforms as T
@@ -12,7 +10,7 @@ from torchvision import transforms as T
 import torch
 import torch.nn as nn
 
-from PIL import Image
+from PIL import Image, ImageFilter
 from glob import glob
 
 import calc_steering_angle as st_util
@@ -133,12 +131,14 @@ def main():
             colorized_preds = decode_fn(pred).astype('uint8')
 
             # Clean up B/W image using morphological operations
-            kernel = np.ones((10,10) , np.uint8) # kernel side determines resolution
+            kernel = np.ones((15,15) , np.uint8) # kernel side determines resolution
             colorized_preds = cv.morphologyEx(colorized_preds, cv.MORPH_OPEN, kernel)
             colorized_preds = cv.morphologyEx(colorized_preds, cv.MORPH_CLOSE, kernel)
 
-            # Forms a B/W image of segmentated drivable region
             colorized_preds = Image.fromarray(colorized_preds)
+            
+            # Medium filter to smooth edges
+            colorized_preds = colorized_preds.filter(ImageFilter.ModeFilter(size=25))
 
             # Create instance of steering angle calculator
             lane_follower = st_util.HandCodedLaneFollower()

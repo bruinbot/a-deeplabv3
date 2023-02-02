@@ -3,7 +3,7 @@ import numpy as np
 import logging
 import math
 
-_SHOW_IMAGE = False
+_SHOW_IMAGE = True
 
 
 class HandCodedLaneFollower(object):
@@ -55,7 +55,7 @@ def detect_lane(frame):
 
     line_segments = detect_line_segments(cropped_edges)
     line_segment_image = display_lines(frame, line_segments)
-    show_image("line segments", line_segment_image)
+    show_image("hough line segments", line_segment_image)
 
     lane_lines = average_slope_intercept(frame, line_segments)
     lane_lines_image = display_lines(frame, lane_lines)
@@ -64,14 +64,7 @@ def detect_lane(frame):
     return lane_lines, lane_lines_image
 
 # detects blue lines formed by edge detected algo
-# repeated
 def detect_edges(frame):
-    # hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    # show_image("hsv", hsv)
-    # lower_blue = np.array([30, 40, 0])
-    # upper_blue = np.array([150, 255, 255])
-    # mask = cv2.inRange(hsv, lower_blue, upper_blue)
-    # show_image("blue mask", mask)
 
     # detect edges
     edges = cv2.Canny(np.array(frame), 50, 200)
@@ -85,10 +78,10 @@ def region_of_interest(canny):
     frame = np.zeros_like(canny)
 
     polygon = np.array([[
-        (width * 0.25, height),
-        (width * 0.25, 0),
-        (width * 0.75, 0),
-        (width * 0.75, height),
+        (0, height * 1 / 2),
+        (width, height * 1 / 2),
+        (width, height),
+        (0, height),
     ]], np.int32)
 
     cv2.fillPoly(frame, polygon, 255)
@@ -99,12 +92,13 @@ def region_of_interest(canny):
 # Tunable
 def detect_line_segments(cropped_edges):
 
-    rho = 1                  # Distance resolution of the accumulator in pixels
-    angle = 1 * np.pi / 180  # Angle resolution of the accumulator in degrees, converted to radians
-    min_threshold = 30       # minimal of votes
-    line_segments = cv2.HoughLinesP(cropped_edges, rho, angle, min_threshold, np.array([]), 
-                                    minLineLength=20,
-                                    maxLineGap=250)
+    rho = 5                  # Resolution of accumulator buckets in pixels, Larger -> more lines
+    angle = 1 * np.pi / 180  # Angle resolution of the accumulator in degrees, converted to radians. Larger -> fewer lines found
+    min_threshold = 10       # minimal of votes to determine line exists. Larger -> fewer lines
+    # Also consider the minimum length a line must be
+    # and max distance between line segments for them to be considered a line
+    line_segments = cv2.HoughLinesP(cropped_edges, rho, angle, min_threshold, 
+                                    np.array([]), minLineLength=30, maxLineGap=4)
     return line_segments
 
 def average_slope_intercept(frame, line_segments):
@@ -126,28 +120,38 @@ def average_slope_intercept(frame, line_segments):
     left_region_boundary = width * (1 - boundary)  # left lane line segment should be on left 2/3 of the screen
     right_region_boundary = width * boundary # right lane line segment should be on left 2/3 of the screen
 
-    for line_segment in line_segments:
-        for x1, y1, x2, y2 in line_segment:
-            if x1 == x2:
-                logging.info('skipping vertical line segment (slope=inf): %s' % line_segment)
-                continue
+    sorter = lambda x: (x[0], x[2], x[1], x[3])
+    line_segments = sorted(line_segments, key=sorter)
+    print(line_segments)
+
+    prev = ()
+    for i in range(len(line_segments)):
+        for x1, y1, x2, y2 in line_segments[i]:
             fit = np.polyfit((x1, x2), (y1, y2), 1)
             slope = fit[0]
             intercept = fit[1]
+            # slope is flipped as origin is top left
             if slope < 0:
                 if x1 < left_region_boundary and x2 < left_region_boundary:
-                    left_fit.append((slope, intercept))
+                    prev = (slope, intercept)
+                    # left_fit.append((slope, intercept))
             else:
                 if x1 > right_region_boundary and x2 > right_region_boundary:
+                    left_fit.append(prev)
                     right_fit.append((slope, intercept))
+                    break
+        else:
+            continue
+        break
 
-    left_fit_average = np.average(left_fit, axis=0)
+    # code averages all the slopes of same sign
+    # left_fit_average = np.average(left_fit, axis=0)
     if len(left_fit) > 0:
-        lane_lines.append(make_points(frame, left_fit_average))
+        lane_lines.append(make_points(frame, left_fit[0]))
 
-    right_fit_average = np.average(right_fit, axis=0)
+    # right_fit_average = np.average(right_fit, axis=0)
     if len(right_fit) > 0:
-        lane_lines.append(make_points(frame, right_fit_average))
+        lane_lines.append(make_points(frame, right_fit[0]))
 
     return lane_lines
 
@@ -167,7 +171,7 @@ def compute_steering_angle(frame, lane_lines):
     else:
         _, _, left_x2, _ = lane_lines[0][0]
         _, _, right_x2, _ = lane_lines[1][0]
-        camera_mid_offset_percent = 0.02 # 0.0 means car pointing to center, -0.03: car is centered to left, +0.03 means car pointing to right
+        camera_mid_offset_percent = 0.0 # 0.0 means car pointing to center, -0.03: car is centered to left, +0.03 means car pointing to right
         mid = int(width / 2 * (1 + camera_mid_offset_percent))
         x_offset = (left_x2 + right_x2) / 2 - mid
 
@@ -239,6 +243,7 @@ def length_of_line_segment(line):
 def show_image(title, frame, show=_SHOW_IMAGE):
     if show:
         cv2.imshow(title, frame)
+        cv2.waitKey()
 
 def make_points(frame, line):
     height, width, _ = frame.shape

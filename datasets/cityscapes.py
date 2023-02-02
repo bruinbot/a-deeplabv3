@@ -29,7 +29,7 @@ class Cityscapes(data.Dataset):
         CityscapesClass('static',               4, 255, 'void', 0, False, True, (0, 0, 0)),
         CityscapesClass('dynamic',              5, 255, 'void', 0, False, True, (0, 0, 0)),
         CityscapesClass('ground',               6, 255, 'void', 0, False, True, (0, 0, 0)),
-        CityscapesClass('road',                 7, 0, 'flat', 1, False, False, (121, 0, 121)),
+        CityscapesClass('road',                 7, 0, 'flat', 1, False, False, (255, 255, 255)),
         CityscapesClass('sidewalk',             8, 1, 'flat', 1, False, False, (255, 255, 255)),
         CityscapesClass('parking',              9, 255, 'flat', 1, False, True, (0, 0, 0)),
         CityscapesClass('rail track',           10, 255, 'flat', 1, False, True, (0, 0, 0)),
