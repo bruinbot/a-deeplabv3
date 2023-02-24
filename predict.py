@@ -124,6 +124,7 @@ def main():
             img_name = os.path.basename(img_path)[:-len(ext)-1]
             
             pic = Image.open(img_path).convert('RGB')
+            pic = pic.resize((640, 480))
             img = transform(pic).unsqueeze(0)
             img = img.to(device)
             
