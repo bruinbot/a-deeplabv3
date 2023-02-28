@@ -1,7 +1,9 @@
+import os
 import cv2
 import numpy as np
 import logging
 import math
+from PIL import Image
 
 _SHOW_IMAGE = True
 
@@ -16,17 +18,18 @@ maxLineGap = 40          # maximum distance between 2 segments to be considered 
 
 class HandCodedLaneFollower(object):
 
-    def __init__(self, car=None):
+    def __init__(self, car=None, img_name=None):
         logging.info('Creating a HandCodedLaneFollower...')
         self.car = car
         self.curr_steering_angle = 90
+        self.img_name = img_name
 
     def follow_lane(self, frame):
 
         frame = np.array(frame)
 
         # Main entry point of the lane follower
-        show_image("orig", frame)
+        show_image("1-orig", frame)
 
         lane_lines, frame = detect_lane(frame)
 
@@ -42,7 +45,7 @@ class HandCodedLaneFollower(object):
 
         new_steering_angle, curr_heading_image = compute_steering_angle(frame, lane_lines)
 
-        show_image("heading", curr_heading_image)
+        show_image("7-heading", curr_heading_image)
 
         return curr_heading_image
 
@@ -53,18 +56,18 @@ def detect_lane(frame):
     logging.debug('detecting lane lines...')
 
     edges = detect_edges(frame)
-    show_image('edges', edges)
+    show_image('2-edges', edges)
 
     cropped_edges = region_of_interest(edges)
-    show_image('edges cropped', cropped_edges)
+    show_image('4-edges cropped', cropped_edges)
 
     line_segments = detect_line_segments(cropped_edges)
     line_segment_image = display_lines(frame, line_segments)
-    show_image("hough line segments", line_segment_image)
+    show_image("5-hough line segments", line_segment_image)
 
     lane_lines = average_slope_intercept(frame, line_segments)
     lane_lines_image = display_lines(frame, lane_lines)
-    show_image("lane lines", lane_lines_image)
+    show_image("6-lane lines", lane_lines_image)
 
     return lane_lines, lane_lines_image
 
@@ -103,7 +106,7 @@ def region_of_interest(img):
     # filling pixels inside the polygon defined by "vertices" with the fill color
     cv2.fillPoly(mask, vertices, ignore_mask_color)
 
-    show_image("ROI", mask)
+    show_image("3-ROI", mask)
 
     # returning the image only where mask pixels are nonzero
     masked_image = cv2.bitwise_and(img, mask)
@@ -231,6 +234,9 @@ def display_heading_line(frame, p1, p2, line_color=(255, 0, 0), line_width=5):
 
 def show_image(title, frame, show=_SHOW_IMAGE):
     if show:
+        img = Image.fromarray(frame)
+        path = ['img_output', 'process', title + '.png']
+        img.save(os.path.join(*path))
         cv2.imshow(title, frame)
         cv2.waitKey()
 
