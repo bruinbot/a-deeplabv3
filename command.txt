@@ -1,1 +1,1 @@
-python3 main.py --input img_input/img.jpg --dataset cityscapes --model deeplabv3plus_mobilenet --ckpt weights/underfitted.pth --save_val_results_to img_output
+python3 main.py --input img_input/img14.jpg --dataset cityscapes --model deeplabv3plus_mobilenet --ckpt weights/underfitted.pth --save_val_results_to img_output

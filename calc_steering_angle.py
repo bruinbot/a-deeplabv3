@@ -6,20 +6,21 @@ import math
 from PIL import Image
 
 _SHOW_IMAGE = True
+_CURVES = True
+_REDUCED_ROI = False
 
 '''
 Hough Line Function Parameters
 '''
-rho = 2                  # Resolution of accumulator buckets in pixels, Larger -> more lines
+rho = 5                  # Resolution of accumulator buckets in pixels, Larger -> more lines
 angle = 1                # Angle resolution of the accumulator in degrees, converted to radians. Larger -> fewer lines found
-min_threshold = 15       # minimal of votes to determine line exists. Larger -> fewer lines
-minLineLength = 15       # minimum length of segment to be considered a line. In pixels
-maxLineGap = 40          # maximum distance between 2 segments to be considered a continuous line
+min_threshold = 5       # minimal of votes to determine line exists. Larger -> fewer lines
+minLineLength = 1       # minimum length of segment to be considered a line. In pixels
+maxLineGap = 20          # maximum distance between 2 segments to be considered a continuous line
 
 class HandCodedLaneFollower(object):
 
     def __init__(self, car=None, img_name=None):
-        logging.info('Creating a HandCodedLaneFollower...')
         self.car = car
         self.curr_steering_angle = 90
         self.img_name = img_name
@@ -38,9 +39,7 @@ class HandCodedLaneFollower(object):
         return final_frame
 
     def steer(self, frame, lane_lines):
-        logging.debug('steering...')
         if len(lane_lines) == 0:
-            logging.error('No lane lines detected, nothing to do.')
             return frame
 
         new_steering_angle, curr_heading_image = compute_steering_angle(frame, lane_lines)
@@ -92,8 +91,11 @@ def region_of_interest(img):
 
     left_bottom = [0, height - 1]
     right_bottom = [width - 1, height - 1]
-    left_up = [scale_w * width, scale_h * height]
-    right_up = [(1 - scale_w) * width, scale_h * height]
+    left_up = [0, 0]
+    right_up = [width - 1, 0]
+    if (_REDUCED_ROI):
+        left_up = [scale_w * width, scale_h * height] # for reduced ROI
+        right_up = [(1 - scale_w) * width, scale_h * height] # for reduced ROI
     vertices = np.array([[left_bottom, left_up, right_up, right_bottom]], dtype=np.int32)
 
     # defining a 3 channel or 1 channel color to fill the mask with depending on the input image
@@ -119,7 +121,9 @@ def detect_line_segments(cropped_edges):
 
 def average_slope_intercept(frame, line_segments):
     """
-    This function combines line segments into one or two lane lines
+    If _CURVES is true, this function returns the line segments as is
+
+    else if _CURVES is false, this function combines line segments into one or two lane lines
     If all line slopes are < 0: then we only have detected left lane
     If all line slopes are > 0: then we only have detected right lane
     """
@@ -127,6 +131,9 @@ def average_slope_intercept(frame, line_segments):
     if line_segments is None:
         print("No lane lines found")
         return lane_lines
+    
+    if (_CURVES):
+        return line_segments
 
     height, width, _ = frame.shape
     left_fit = []
@@ -165,12 +172,39 @@ def average_slope_intercept(frame, line_segments):
 
     return lane_lines
 
+
 def compute_steering_angle(frame, lane_lines):
-    """ Find the steering angle based on lane line coordinate
-        We assume that camera is calibrated to point to dead center
+    """ 
+    If _CURVES is true, this function displays a set of waypoints and returns an array of steering angles for each waypoint
+    else if _CURVES is false, this function returns the steering angle based on the lane lines
     """
     if len(lane_lines) == 0:
-        return -90
+        return 90
+
+    if (_CURVES):
+        steering_angles = []
+        img_with_lines = np.zeros_like(frame)
+        for lane_line in lane_lines:
+            for x1, y1, x2, y2 in lane_line:
+                x_mid = int((x1 + x2) / 2)
+                y_mid = int((y1 + y2) / 2)
+                y_diff = y2 - y1
+                x_diff = x2 - x1
+                if (x_diff == 0 or y_diff == 0):
+                    continue # skip vertical or horizontal lines
+
+                slope = -(x_diff / y_diff) # slope of normal line passing through the center of the line segment
+                intercept = y_mid - slope * x_mid
+                x_arb = x_mid + 20
+                y_arb = int(slope * x_arb + intercept)
+                mid_line = np.zeros_like(frame)
+                cv2.line(mid_line, (x_mid, y_mid), (x_arb, y_arb), (100, 255, 0), 5)
+                
+                steering_angle = math.degrees(math.atan(slope))
+                steering_angles.append(steering_angle)
+                img_with_lines = cv2.addWeighted(img_with_lines, 0.7, mid_line, 1, 1)
+        print(steering_angles)
+        return steering_angles, img_with_lines
 
     if len(lane_lines) == 1:
         mid_start_x, mid_start_y, mid_end_x, mid_end_y = lane_lines[0][0]
@@ -186,10 +220,15 @@ def compute_steering_angle(frame, lane_lines):
         mid_end_y = int((left_y2 + right_y2) / 2)
 
     # Find slope of line connecting 2 points
-    slope = (mid_end_y - mid_start_y) / (mid_end_x - mid_start_x) 
+    y_diff = mid_end_y - mid_start_y
+    x_diff = mid_end_x - mid_start_x
+    if x_diff == 0:
+        steering_angle = 90
+    else:
+        slope = y_diff / x_diff
 
-    # Find angle from slope
-    steering_angle = (math.atan(slope) * 180 / math.pi)
+        # Find angle from slope
+        steering_angle = math.degrees(math.atan(slope))
 
     heading_line_img = display_heading_line(frame, (mid_start_x, mid_start_y), (mid_end_x, mid_end_y))
     print("Pre-stabilized steering angle: ", steering_angle)
@@ -240,11 +279,11 @@ def show_image(title, frame, show=_SHOW_IMAGE):
         cv2.imshow(title, frame)
         cv2.waitKey()
 
+# Given a slope and intercept, output start and end coordinates of a line
 pre_l_slopes = []
 pre_l_inters = []  
 pre_r_slopes = []
 pre_r_inters = []
-
 def make_points(slope, inter, side, height):
     number_buffer_frames = 3
     scale_y = 0.65

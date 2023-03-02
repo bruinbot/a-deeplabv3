@@ -86,7 +86,6 @@ def main():
     utils.set_bn_momentum(model.backbone, momentum=0.01)
     
     if opts.ckpt is not None and os.path.isfile(opts.ckpt):
-        # https://github.com/VainF/DeepLabV3Plus-Pytorch/issues/8#issuecomment-605601402, @PytaichukBohdan
         checkpoint = torch.load(opts.ckpt, map_location=torch.device('cpu'))
         model.load_state_dict(checkpoint["model_state"])
         model = nn.DataParallel(model)
