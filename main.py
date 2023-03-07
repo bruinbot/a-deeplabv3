@@ -97,8 +97,6 @@ def main():
         model = nn.DataParallel(model)
         model.to(device)
 
-    # denorm = utils.Denormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # denormalization for ori images
-
     if opts.crop_val:
         transform = T.Compose([
                 T.Resize(opts.crop_size),
@@ -143,8 +141,6 @@ def main():
             # Create instance of steering angle calculator
             lane_follower = st_util.HandCodedLaneFollower(img_name)
 
-            # Function that does a couple of things that could be removed.
-            # Most importantly returns array with boundary line overlay and calls another function that returns steering angle
             pred_with_angle = lane_follower.follow_lane(colorized_preds)
 
             # Create the image
