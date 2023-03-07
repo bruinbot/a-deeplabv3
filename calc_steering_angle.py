@@ -42,7 +42,7 @@ class HandCodedLaneFollower(object):
         if len(lane_lines) == 0:
             return frame
 
-        new_steering_angle, curr_heading_image = compute_steering_angle(frame, lane_lines)
+        curr_heading_image, waypoints = compute_steering_angle(frame, lane_lines)
 
         show_image("7-heading", curr_heading_image)
 
@@ -182,29 +182,37 @@ def compute_steering_angle(frame, lane_lines):
         return 90
 
     if (_CURVES):
-        steering_angles = []
-        img_with_lines = np.zeros_like(frame)
-        for lane_line in lane_lines:
-            for x1, y1, x2, y2 in lane_line:
-                x_mid = int((x1 + x2) / 2)
-                y_mid = int((y1 + y2) / 2)
-                y_diff = y2 - y1
-                x_diff = x2 - x1
-                if (x_diff == 0 or y_diff == 0):
-                    continue # skip vertical or horizontal lines
+        x_threshold = 5
+        y_threshold = 15
+        waypoint_steps = 20
+        waypoints = []
 
-                slope = -(x_diff / y_diff) # slope of normal line passing through the center of the line segment
-                intercept = y_mid - slope * x_mid
-                x_arb = x_mid + 20
-                y_arb = int(slope * x_arb + intercept)
-                mid_line = np.zeros_like(frame)
-                cv2.line(mid_line, (x_mid, y_mid), (x_arb, y_arb), (100, 255, 0), 5)
-                
-                steering_angle = math.degrees(math.atan(slope))
-                steering_angles.append(steering_angle)
-                img_with_lines = cv2.addWeighted(img_with_lines, 0.7, mid_line, 1, 1)
-        print(steering_angles)
-        return steering_angles, img_with_lines
+        img_with_lines = np.zeros_like(frame)
+        img_with_lines = display_lines(img_with_lines, lane_lines, line_width=1)
+
+        lower_green = np.array([0,250,0])
+        upper_green = np.array([1,255,1])
+        mask = cv2.inRange(img_with_lines, lower_green, upper_green)
+        coord = cv2.findNonZero(mask) # already sorted by y
+        num_lines, _, _ = np.shape(coord)
+        if coord is not None:
+            for i in range(0, num_lines-1):
+                if i % waypoint_steps == 0:
+                    x1 = coord[i][0][0]
+                    y1 = coord[i][0][1]
+                    x2 = coord[i+1][0][0]
+                    y2 = coord[i+1][0][1]
+
+                    if (abs(x1 - x2) < x_threshold):
+                        continue # don't draw circle between points too close together
+                    if (y1 == y2):
+                        if (len(waypoints) > 0 and (abs(y1 - waypoints[-1][1]) < y_threshold)):
+                            continue
+                        x_mid = int((x1 + x2) / 2)
+                        cv2.circle(img_with_lines, (x_mid, y1), 5, (0, 0, 255), -1)
+                        waypoints.append((x_mid, y1))
+
+        return img_with_lines, waypoints
 
     if len(lane_lines) == 1:
         mid_start_x, mid_start_y, mid_end_x, mid_end_y = lane_lines[0][0]
@@ -235,22 +243,6 @@ def compute_steering_angle(frame, lane_lines):
 
     return steering_angle, heading_line_img
 
-# Unused.
-def stabilize_steering_angle(curr_steering_angle, new_steering_angle, num_of_lane_lines, max_angle_deviation_two_lines=5, max_angle_deviation_one_lane=1):
-    if num_of_lane_lines == 2 :
-        # if both lane lines detected, then we can deviate more
-        max_angle_deviation = max_angle_deviation_two_lines
-    else :
-        # if only one lane detected, don't deviate too much
-        max_angle_deviation = max_angle_deviation_one_lane
-    
-    angle_deviation = new_steering_angle - curr_steering_angle
-    if abs(angle_deviation) > max_angle_deviation:
-        stabilized_steering_angle = int(curr_steering_angle
-                                        + max_angle_deviation * angle_deviation / abs(angle_deviation))
-    else:
-        stabilized_steering_angle = new_steering_angle
-    return stabilized_steering_angle
 
 ############################
 # Utility Functions
