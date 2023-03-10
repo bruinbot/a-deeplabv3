@@ -86,7 +86,6 @@ def main():
     utils.set_bn_momentum(model.backbone, momentum=0.01)
     
     if opts.ckpt is not None and os.path.isfile(opts.ckpt):
-        # https://github.com/VainF/DeepLabV3Plus-Pytorch/issues/8#issuecomment-605601402, @PytaichukBohdan
         checkpoint = torch.load(opts.ckpt, map_location=torch.device('cpu'))
         model.load_state_dict(checkpoint["model_state"])
         model = nn.DataParallel(model)
@@ -97,8 +96,6 @@ def main():
         print("[!] Retrain: Your weights are not found.")
         model = nn.DataParallel(model)
         model.to(device)
-
-    # denorm = utils.Denormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # denormalization for ori images
 
     if opts.crop_val:
         transform = T.Compose([
@@ -144,8 +141,6 @@ def main():
             # Create instance of steering angle calculator
             lane_follower = st_util.HandCodedLaneFollower(img_name)
 
-            # Function that does a couple of things that could be removed.
-            # Most importantly returns array with boundary line overlay and calls another function that returns steering angle
             pred_with_angle = lane_follower.follow_lane(colorized_preds)
 
             # Create the image
